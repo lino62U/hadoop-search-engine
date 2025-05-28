@@ -1,17 +1,11 @@
 import { useEffect, useRef, useState } from "react"
 import { formatDuration } from "../utils/formatDuration"
-import { formatTimeAgo } from "../utils/formatTimeAgo"
+import { Link } from "react-router-dom"
 
 type VideoGridItemProps = {
   id: string
   title: string
-  channel: {
-    id: string
-    name: string
-    profileUrl: string
-  }
   views: number
-  postedAt: Date
   duration: number
   thumbnailUrl: string
   videoUrl: string
@@ -22,9 +16,7 @@ const VIEW_FORMATTER = new Intl.NumberFormat(undefined, { notation: "compact" })
 export function VideoGridItem({
   id,
   title,
-  channel,
   views,
-  postedAt,
   duration,
   thumbnailUrl,
   videoUrl,
@@ -49,39 +41,33 @@ export function VideoGridItem({
       onMouseEnter={() => setIsVideoPlaying(true)}
       onMouseLeave={() => setIsVideoPlaying(false)}
     >
-      <a href={`/watch?v=${id}`} className="relative aspect-video">
+      <Link to={`/watch/${videoUrl}`} className="relative aspect-video">
         <img
           src={thumbnailUrl}
-          className={`block w-full h-full object-cover transition-[border-radius] duration-200 ${
-            isVideoPlaying ? "rounded-none" : "rounded-xl"
-          }`}
+          className={`block w-full h-full object-cover transition-[border-radius] duration-200 ${isVideoPlaying ? "rounded-none" : "rounded-xl"
+            }`}
         />
         <div className="absolute bottom-1 right-1 bg-secondary-dark text-secondary text-sm px-0.5 rounded">
           {formatDuration(duration)}
         </div>
         <video
-          className={`block h-full object-cover absolute inset-0 transition-opacity duration-200 ${
-            isVideoPlaying ? "opacity-100 delay-200" : "opacity-0"
-          }`}
+          className={`block h-full object-cover absolute inset-0 transition-opacity duration-200 ${isVideoPlaying ? "opacity-100 delay-200" : "opacity-0"
+            }`}
           ref={videoRef}
           muted
           playsInline
           src={videoUrl}
         />
-      </a>
+      </Link>
       <div className="flex gap-2">
-        <a href={`/@${channel.id}`} className="flex-shrink-0">
-          <img className="w-12 h-12 rounded-full" src={channel.profileUrl} />
-        </a>
+
         <div className="flex flex-col">
-          <a href={`/watch?v=${id}`} className="font-bold">
+          <Link to={`/watch/${id}`} className="font-bold">
             {title}
-          </a>
-          <a href={`/@${channel.id}`} className="text-secondary-text text-sm">
-            {channel.name}
-          </a>
+          </Link>
+
           <div className="text-secondary-text text-sm">
-            {VIEW_FORMATTER.format(views)} Views • {formatTimeAgo(postedAt)}
+            {VIEW_FORMATTER.format(views)} Frecuencia
           </div>
         </div>
       </div>
