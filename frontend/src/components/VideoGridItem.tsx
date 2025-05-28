@@ -41,7 +41,7 @@ export function VideoGridItem({
       onMouseEnter={() => setIsVideoPlaying(true)}
       onMouseLeave={() => setIsVideoPlaying(false)}
     >
-      <Link to={`/watch/${id}`} className="relative aspect-video">
+      <Link to={`/watch/${videoUrl}`} className="relative aspect-video">
         <img
           src={thumbnailUrl}
           className={`block w-full h-full object-cover transition-[border-radius] duration-200 ${isVideoPlaying ? "rounded-none" : "rounded-xl"
@@ -67,7 +67,7 @@ export function VideoGridItem({
           </Link>
 
           <div className="text-secondary-text text-sm">
-            {VIEW_FORMATTER.format(views)} Views
+            {VIEW_FORMATTER.format(views)} Frecuencia
           </div>
         </div>
       </div>

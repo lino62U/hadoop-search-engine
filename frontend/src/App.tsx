@@ -3,14 +3,43 @@ import { CategoryPills } from './components/CategoryPills'
 import { SidebarProvider } from './contexts/SidebarProvider'
 import { PageHeader } from './layouts/PageHeader'
 import { VideoGridItem } from './components/VideoGridItem'
-import { useState } from 'react'
-import { categories, videos } from './data/home'
+import { useEffect, useState } from 'react'
 import SearchPage from './components/SearchPage'
 import WatchPage from './components/WatchPage'
+import { categories } from './data/home'
 
+type VideoEntry = { id: string, frecuencia: number }
 
 export default function App() {
   const [selectedCategory, setSelectedCategory] = useState(categories[0])
+  const [videoMap, setVideoMap] = useState<Record<string, VideoEntry[]>>({})
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const response = await fetch(`http://localhost:5000/leer?ruta=/inverted_index/part-00000`);
+      const data = await response.json();
+      const contenido = data.contenido;
+
+      const lineas = contenido.trim().split("\n");
+      const resultado: Record<string, VideoEntry[]> = {}
+
+      for (const linea of lineas) {
+        const [palabra, valores] = linea.split("\t")
+        const archivos = valores.split(",").map(par => {
+          const [archivo, frecuencia] = par.split(":")
+          return {
+            id: archivo,
+            frecuencia: Number(frecuencia),
+          }
+        })
+        resultado[palabra] = archivos
+      }
+
+      setVideoMap(resultado)
+    }
+
+    fetchData()
+  }, [])
 
   return (
     <SidebarProvider>
@@ -31,9 +60,32 @@ export default function App() {
                       />
                     </div>
                     <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(300px,1fr))]">
-                      {videos.map(video => (
-                        <VideoGridItem key={video.id} {...video} />
-                      ))}
+                      {/* Aquí usamos todos los videos de todas las palabras como ejemplo */}
+                      {(() => {
+                        const uniqueVideos = new Map<string, VideoEntry>();
+
+                        for (const videos of Object.values(videoMap)) {
+                          for (const video of videos) {
+                            // Si ya existe el video, puedes decidir si quieres sumar la frecuencia o ignorar
+                            if (!uniqueVideos.has(video.id)) {
+                              uniqueVideos.set(video.id, { ...video });
+                            }
+                          }
+                        }
+
+                        return Array.from(uniqueVideos.values()).map(video => (
+                          <VideoGridItem
+                            key={video.id}
+                            id={video.id}
+                            title={video.id}
+                            duration={5}
+                            thumbnailUrl="https://i.ytimg.com/vi/B4Y9Ed4lLAI/maxresdefault.jpg"
+                            videoUrl={video.id}
+                            views={video.frecuencia}
+                          />
+                        ));
+                      })()}
+
                     </div>
                   </div>
                 </div>
