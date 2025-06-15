@@ -1,4 +1,3 @@
-// src/pages/WatchPage.tsx
 import { useParams } from 'react-router-dom'
 
 export default function WatchPage() {
@@ -9,14 +8,14 @@ export default function WatchPage() {
 
   return (
     <div className="p-8 flex justify-center">
-      <iframe
+      <video
         className="w-[1180px] h-[660px] rounded-xl shadow-lg"
-        src={`https://www.youtube.com/embed/${id}`}
-        title="YouTube video player"
-        frameBorder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-      ></iframe>
+        controls
+        autoPlay
+      >
+        <source src={`http://localhost:5000/video/${id}`} type="video/mp4" />
+        Tu navegador no soporta el elemento de video.
+      </video>
     </div>
   )
 }

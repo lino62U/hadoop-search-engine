@@ -1,25 +1,35 @@
 import { useLocation } from 'react-router-dom'
 import { useEffect, useState, useMemo } from 'react'
 import { VideoGridItem } from '../components/VideoGridItem'
-import searchWords from '../services/searchVideos'
-import type { IVideo } from '../interfaces/video.interface'
-import { videoUrls } from '../data/videos'
+
+type IVideo = {
+  id: string
+  puntuacion: number
+}
+
 export default function SearchPage() {
   const location = useLocation()
 
   const keywords = useMemo(() => {
     const queryParams = new URLSearchParams(location.search)
-    return queryParams.getAll('q')
+    return queryParams.getAll('q')  // permite múltiples palabras: ?q=perro&q=persona
   }, [location.search])
 
   const [videos, setVideos] = useState<IVideo[]>([])
 
   useEffect(() => {
     const fetchResults = async () => {
-      const res = await searchWords(keywords)
-      setVideos(res)
+      try {
+        const query = keywords.join(',')
+        const res = await fetch(`http://localhost:5000/buscar?q=${query}`)
+        const data = await res.json()
+        setVideos(data.videos)  // [{ id: "prueba2.mp4", puntuacion: 5 }, ...]
+      } catch (err) {
+        console.error("Error fetching search results", err)
+      }
     }
-    fetchResults()
+
+    if (keywords.length > 0) fetchResults()
   }, [keywords])
 
   return (
@@ -30,20 +40,18 @@ export default function SearchPage() {
         <p>No se encontraron resultados.</p>
       ) : (
         <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(300px,1fr))]">
-          {videos.map(video => {
-            const videoUrl = videoUrls[video.id] || '' // Fallback vacío si no se encuentra
-            return (
-              <VideoGridItem
-                key={video.id}
-                id={video.id}
-                duration={5}
-                title={video.id}
-                thumbnailUrl="https://i.ytimg.com/vi/B4Y9Ed4lLAI/maxresdefault.jpg"
-                videoUrl={videoUrl}
-                views={video.puntuacion}
-              />
-            )
-          })}
+          {videos.map(video => (
+            <VideoGridItem
+            key={video.id}
+            id={video.id}
+            duration={5}
+            title={video.id}
+            thumbnailUrl="https://i.ytimg.com/vi/B4Y9Ed4lLAI/maxresdefault.jpg"
+            videoSrc={`http://localhost:5000/video/${video.id}`}  // para hover
+            views={video.puntuacion}
+          />
+          
+          ))}
         </div>
       )}
     </div>

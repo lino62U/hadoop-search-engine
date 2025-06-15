@@ -8,7 +8,7 @@ type VideoGridItemProps = {
   views: number
   duration: number
   thumbnailUrl: string
-  videoUrl: string
+  videoSrc: string  // para src de <video>
 }
 
 const VIEW_FORMATTER = new Intl.NumberFormat(undefined, { notation: "compact" })
@@ -19,14 +19,13 @@ export function VideoGridItem({
   views,
   duration,
   thumbnailUrl,
-  videoUrl,
+  videoSrc,
 }: VideoGridItemProps) {
   const [isVideoPlaying, setIsVideoPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
-    if (videoRef.current == null) return
-
+    if (!videoRef.current) return
     if (isVideoPlaying) {
       videoRef.current.currentTime = 0
       videoRef.current.play()
@@ -41,7 +40,7 @@ export function VideoGridItem({
       onMouseEnter={() => setIsVideoPlaying(true)}
       onMouseLeave={() => setIsVideoPlaying(false)}
     >
-      <Link to={`/watch/${videoUrl}`} className="relative aspect-video">
+      <Link to={`/watch/${id}`} className="relative aspect-video">
         <img
           src={thumbnailUrl}
           className={`block w-full h-full object-cover transition-[border-radius] duration-200 ${isVideoPlaying ? "rounded-none" : "rounded-xl"
@@ -56,16 +55,14 @@ export function VideoGridItem({
           ref={videoRef}
           muted
           playsInline
-          src={videoUrl}
+          src={videoSrc}
         />
       </Link>
       <div className="flex gap-2">
-
         <div className="flex flex-col">
           <Link to={`/watch/${id}`} className="font-bold">
             {title}
           </Link>
-
           <div className="text-secondary-text text-sm">
             {VIEW_FORMATTER.format(views)} Frecuencia
           </div>
