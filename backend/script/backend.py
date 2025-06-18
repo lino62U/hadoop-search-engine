@@ -1,3 +1,4 @@
+ cat backend.py 
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from pyhive import hive
@@ -12,6 +13,14 @@ CORS(app)
 
 HDFS_PATH = "/videos"
 CHUNK_SIZE = 1024 * 1024  # 1MB
+
+
+HIVE_HOST = "localhost"
+HIVE_PORT = 10000
+HIVE_USER = "hadoop"
+HIVE_DB = "default"
+HIVE_TABLE = "inverted_index_v2"
+
 
 # 🔍 Consulta al índice invertido para una o varias palabras clave
 @app.route("/buscar", methods=["GET"])
@@ -33,7 +42,7 @@ def buscar_videos():
         videos = []
 
         for palabra in lista_palabras:
-            cursor.execute(f"SELECT filename FROM inverted_index WHERE word='{palabra}'")
+            cursor.execute(f"SELECT video_id FROM inverted_index WHERE term='{palabra}'")
             resultados = cursor.fetchall()
 
             for fila in resultados:
@@ -111,5 +120,42 @@ def stream_video(filename):
         print("❌ Error:", e)
         return Response("Error al procesar video", status=500)
 
+conn = hive.Connection(
+    host='localhost',
+    port=10000,
+    username='hadoop',
+    database='video_index_db'  # <<----- AQUI ESTA EL CAMBIO CLAVE
+)
+cursor = conn.cursor()
+
+
+@app.route('/search', methods=['GET'])
+def buscar_termino():
+    termino = request.args.get('termino')
+    if not termino:
+        return jsonify({"error": "Debe proporcionar un término"}), 400
+
+    try:
+        query = f"SELECT * FROM inverted_index_normalized WHERE term='{termino}'"
+        cursor.execute(query)
+        resultados = cursor.fetchall()
+
+        # Construir salida en formato {"videos": [{"id": ..., "puntuacion": ...}, ...]}
+        videos = [
+            {
+                "id": row[1],          # video
+                "puntuacion": row[2]   # frequency
+            }
+            for row in resultados
+        ]
+
+        return jsonify({"videos": videos})
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+(venv) hadoop@leon:~/hadoop-search-engine/backend/script$ 
+
+

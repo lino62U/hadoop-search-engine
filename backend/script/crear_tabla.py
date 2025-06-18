@@ -1,83 +1,78 @@
-import subprocess
+#!/usr/bin/env python3
 from pyhive import hive
+import subprocess
 
-# Config
-HDFS_VIDEOS_DIR = "/videos"
-LOCAL_METADATA_FILE = "videos_metadata.txt"
-LOCAL_INDEX_FILE = "inverted_index.txt"
-HDFS_METADATA_DIR = "/videos_metadata"
-HDFS_INDEX_DIR = "/inverted_index"
+# Configuración
+HDFS_INDEX_PATH = "/spark/inverted_index_videos_2"
+HIVE_TABLE_NAME = "inverted_index_v2"
+HIVE_DB_NAME = "default"
 
-# 1. Leer lista de videos en HDFS
-def listar_videos_en_hdfs():
-    result = subprocess.check_output(["hdfs", "dfs", "-ls", HDFS_VIDEOS_DIR])
-    lines = result.decode().strip().split("\n")[1:]
-    rutas = [line.split()[-1] for line in lines]
-    return rutas
-
-# 2. Crear archivo metadata
-def crear_archivo_metadata(rutas):
-    with open(LOCAL_METADATA_FILE, "w") as f:
-        for path in rutas:
-            video_id = path.split("/")[-1]
-            f.write(f"{video_id}\t{path}\n")
-    print("✅ Metadata generada.")
-
-# 3. Crear índice invertido simple
-def crear_indice_invertido_simulado():
-    # Este ejemplo es fijo, puedes usar NLP después
-    data = [
-        "perro\tprueba2.mp4",
-        "gato\tprueba.mp4",
-        "persona\tprueba2.mp4,prueba.mp4",
-    ]
-    with open(LOCAL_INDEX_FILE, "w") as f:
-        f.write("\n".join(data))
-    print("✅ Índice invertido simulado generado.")
-
-# 4. Subir archivos a HDFS
-def subir_a_hdfs():
-    subprocess.run(["hdfs", "dfs", "-mkdir", "-p", HDFS_METADATA_DIR])
-    subprocess.run(["hdfs", "dfs", "-put", "-f", LOCAL_METADATA_FILE, HDFS_METADATA_DIR])
-    subprocess.run(["hdfs", "dfs", "-mkdir", "-p", HDFS_INDEX_DIR])
-    subprocess.run(["hdfs", "dfs", "-put", "-f", LOCAL_INDEX_FILE, HDFS_INDEX_DIR])
-    print("✅ Archivos subidos a HDFS.")
-
-# 5. Crear tablas Hive
-def crear_tablas_hive():
-    conn = hive.Connection(host="localhost", port=10000, username="hadoop")
-    cursor = conn.cursor()
-
-    cursor.execute("DROP TABLE IF EXISTS videos_metadata")
-    cursor.execute(f"""
-        CREATE EXTERNAL TABLE videos_metadata (
-            video_id STRING,
-            hdfs_path STRING
+def create_hive_table():
+    """Crea la tabla Hive para el índice invertido"""
+    try:
+        # Conexión a Hive
+        conn = hive.Connection(host="localhost", port=10000, username="hadoop")
+        cursor = conn.cursor()
+        
+        cursor.execute(f"USE {HIVE_DB_NAME}")
+        cursor.execute(f"DROP TABLE IF EXISTS {HIVE_TABLE_NAME}")
+        
+        create_table_query = f"""
+        CREATE EXTERNAL TABLE {HIVE_TABLE_NAME} (
+            term STRING COMMENT 'Término de búsqueda',
+            video_list STRING COMMENT 'Lista de videos y conteos en formato video:cnt,video:cnt'
         )
         ROW FORMAT DELIMITED
-        FIELDS TERMINATED BY '\\t'
+        FIELDS TERMINATED BY '\t'
         STORED AS TEXTFILE
-        LOCATION '{HDFS_METADATA_DIR}'
-    """)
+        LOCATION '{HDFS_INDEX_PATH}'
+        """
+        cursor.execute(create_table_query)
+        print(f"✅ Tabla {HIVE_TABLE_NAME} creada exitosamente en Hive.")
+        
+        # Crear vista normalizada CORREGIDA
+        create_view_query = f"""
+        CREATE VIEW IF NOT EXISTS {HIVE_TABLE_NAME}_normalized AS
+        SELECT 
+            term,
+            split(video_entry, ':')[0] AS filename,
+            cast(split(video_entry, ':')[1] AS INT) AS count
+        FROM {HIVE_TABLE_NAME}
+        LATERAL VIEW explode(split(video_list, ',')) t AS video_entry
+        """
+        cursor.execute(create_view_query)
+        print(f"✅ Vista normalizada {HIVE_TABLE_NAME}_normalized creada correctamente.")
+        
+    except Exception as e:
+        print(f"❌ Error al crear la tabla Hive: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
 
-    cursor.execute("DROP TABLE IF EXISTS inverted_index")
-    cursor.execute(f"""
-        CREATE EXTERNAL TABLE inverted_index (
-            term STRING,
-            video_id STRING
-        )
-        ROW FORMAT DELIMITED
-        FIELDS TERMINATED BY '\\t'
-        STORED AS TEXTFILE
-        LOCATION '{HDFS_INDEX_DIR}'
-    """)
-    print("✅ Tablas Hive creadas.")
+def verify_hdfs_data():
+    """Verifica que los datos existen en HDFS"""
+    try:
+        print("Verificando datos en HDFS...")
+        result = subprocess.check_output(["hdfs", "dfs", "-ls", HDFS_INDEX_PATH])
+        files = result.decode().strip().split('\n')
+        print(f"Archivos encontrados en {HDFS_INDEX_PATH}:")
+        for f in files:
+            print(f)
+        return True
+    except subprocess.CalledProcessError:
+        print(f"❌ No se encontraron datos en {HDFS_INDEX_PATH}")
+        return False
+    except Exception as e:
+        print(f"❌ Error al verificar HDFS: {str(e)}")
+        return False
 
-# Ejecutar todo
 if __name__ == "__main__":
-    rutas = listar_videos_en_hdfs()
-    crear_archivo_metadata(rutas)
-    crear_indice_invertido_simulado()
-    subir_a_hdfs()
-    crear_tablas_hive()
-    print("🎉 Proceso completado.")
+    print("Iniciando creación de tabla Hive para índice invertido...")
+    
+    if verify_hdfs_data():
+        create_hive_table()
+    
+    print("Proceso completado.")
+(venv) hadoop@leon:~/hadoop-search-engine/backend/script$ 
+
+
