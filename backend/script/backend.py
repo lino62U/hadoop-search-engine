@@ -1,4 +1,3 @@
- cat backend.py 
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from pyhive import hive
@@ -154,8 +153,32 @@ def buscar_termino():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+import random
+
+@app.route('/videos_random', methods=['GET'])
+def obtener_videos():
+    try:
+        query = "SELECT * FROM inverted_index_normalized"
+        cursor.execute(query)
+        resultados = cursor.fetchall()
+
+        # Filtrar aleatoriamente 20 entradas (o menos si no hay suficientes)
+        muestra_aleatoria = random.sample(resultados, min(20, len(resultados)))
+
+        # Convertir a formato deseado: { id, frecuencia }
+        videos = [
+            {
+                "id": fila[1],           # video
+                "frecuencia": fila[2]    # frequency
+            }
+            for fila in muestra_aleatoria
+        ]
+
+        return jsonify(videos)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-(venv) hadoop@leon:~/hadoop-search-engine/backend/script$ 
-
-

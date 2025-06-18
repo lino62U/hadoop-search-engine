@@ -12,30 +12,13 @@ type VideoEntry = { id: string, frecuencia: number }
 
 export default function App() {
   const [selectedCategory, setSelectedCategory] = useState(categories[0])
-  const [videoMap, setVideoMap] = useState<Record<string, VideoEntry[]>>({})
+  const [videoMap, setVideoMap] = useState<VideoEntry[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
-      const response = await fetch(`http://localhost:5000/leer?ruta=/inverted_index/part-00000`);
+      const response = await fetch(`http://localhost:5000/videos_random`);
       const data = await response.json();
-      const contenido = data.contenido;
-
-      const lineas = contenido.trim().split("\n");
-      const resultado: Record<string, VideoEntry[]> = {}
-
-      for (const linea of lineas) {
-        const [palabra, valores] = linea.split("\t")
-        const archivos = valores.split(",").map(par => {
-          const [archivo, frecuencia] = par.split(":")
-          return {
-            id: archivo,
-            frecuencia: Number(frecuencia),
-          }
-        })
-        resultado[palabra] = archivos
-      }
-
-      setVideoMap(resultado)
+      setVideoMap(data)
     }
 
     fetchData()
@@ -60,31 +43,17 @@ export default function App() {
                       />
                     </div>
                     <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(300px,1fr))]">
-                      {/* Aquí usamos todos los videos de todas las palabras como ejemplo */}
-                      {(() => {
-                        const uniqueVideos = new Map<string, VideoEntry>();
-
-                        for (const videos of Object.values(videoMap)) {
-                          for (const video of videos) {
-                            // Si ya existe el video, puedes decidir si quieres sumar la frecuencia o ignorar
-                            if (!uniqueVideos.has(video.id)) {
-                              uniqueVideos.set(video.id, { ...video });
-                            }
-                          }
-                        }
-
-                        return Array.from(uniqueVideos.values()).map(video => (
-                          <VideoGridItem
-                            key={video.id}
-                            id={video.id}
-                            title={video.id}
-                            duration={5}
-                            thumbnailUrl="https://i.ytimg.com/vi/B4Y9Ed4lLAI/maxresdefault.jpg"
-                            videoUrl={video.id}
-                            views={video.frecuencia}
-                          />
-                        ));
-                      })()}
+                      {videoMap.map(vid => (
+                        <VideoGridItem
+                          key={vid.id}
+                          id={vid.id}
+                          title={vid.id}
+                          duration={5}
+                          thumbnailUrl="https://images.squarespace-cdn.com/content/v1/5e2f2c9ca1e8e420307e5fb0/1738163221197-GCEA4X24CFESOKTP3KIT/Parking+lot+full+of+cars+1893843900-Web.jpg"
+                          videoUrl={vid.id}
+                          views={vid.frecuencia}
+                        />
+                      ))}
 
                     </div>
                   </div>
